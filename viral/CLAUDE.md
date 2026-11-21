@@ -11,11 +11,11 @@ Pipeline that turns recent GTA VI clips (mainly Instagram reels) into vertical s
 Run from `viral/` with the system Python (`pip install -r ../requirements.txt`; ffmpeg system-wide). Use `-I` for Python:
 
 ```
-.venv\Scripts\python.exe -I pipeline.py reels.txt [--limit N] [--type gameplay|talk] [--no-llm]
-.venv\Scripts\python.exe -I search.py [--days 90] [--limit 20]    # YouTube search, CC-licensed only
-.venv\Scripts\python.exe -I review.py [--open]                    # static review sheet (output/review.html)
-.venv\Scripts\python.exe -I serve.py [--port 8765] [--open]       # local server: review sheet + text editor that re-renders a video
-.venv\Scripts\python.exe -I pipeline.py --redo-fix [--ids ID...]  # re-render needs_fix items (+ given ids) from queue.json
+python -I pipeline.py reels.txt [--limit N] [--type gameplay|talk] [--no-llm]
+python -I search.py [--days 90] [--limit 20]    # YouTube search, CC-licensed only
+python -I review.py [--open]                    # static review sheet (output/review.html)
+python -I serve.py [--port 8765] [--open]       # local server: review sheet + text editor that re-renders a video
+python -I pipeline.py --redo-fix [--ids ID...]  # re-render needs_fix items (+ given ids) from queue.json
 ```
 
 No tests or linter. Verify changes by running the batch and looking at frames from `output/*.mp4`.
