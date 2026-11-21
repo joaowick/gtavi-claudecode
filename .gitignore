@@ -8,3 +8,10 @@ test/
 !docs/*.mp4
 kaynak/
 .DS_Store
+
+# viral pipeline: local data and secrets
+viral/output/
+viral/work/
+viral/input/
+viral/postiz/.env
+viral/__pycache__/

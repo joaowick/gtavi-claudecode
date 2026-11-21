@@ -1,0 +1,8 @@
+# Override para acessar o Postiz pelo celular via tunel. Uso (feito por tunnel.ps1):
+#   $env:POSTIZ_PUBLIC_URL="https://xxxx.trycloudflare.com"; docker compose -f docker-compose.yaml -f docker-compose.tunnel.yaml up -d
+services:
+  postiz:
+    environment:
+      MAIN_URL: '${POSTIZ_PUBLIC_URL:?defina POSTIZ_PUBLIC_URL}'
+      FRONTEND_URL: '${POSTIZ_PUBLIC_URL}'
+      NEXT_PUBLIC_BACKEND_URL: '${POSTIZ_PUBLIC_URL}/api'
