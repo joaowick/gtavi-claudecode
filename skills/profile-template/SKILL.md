@@ -5,7 +5,7 @@ description: Render a clip in the user's own profile template (black background,
 
 # Profile template
 
-The template comes from the user's gta6-viral project (`pilot/pipeline.py`, `profile.json`, `assets/profile.png`). `scripts/profile_clip.py` imports its `render()`; nothing in that project is changed and nothing is added to its queue or schedule.
+The template is self-contained: `scripts/profile_render.py` (renderer) and `profile/profile.json` + `profile/avatar.png` (name, handle, avatar; edit them to change the page identity). Ported from the user's gta6-viral pipeline.
 
 ## Steps
 
@@ -20,7 +20,7 @@ The template comes from the user's gta6-viral project (`pilot/pipeline.py`, `pro
 
 ## Notes
 
-- Template location: `--pipeline` or env `GTA6VIRAL_PIPELINE`; default is `C:\Users\joaot\workspace\gta6-viral\pilot`. Needs Pillow (`pip install pillow`).
+- Windows fonts (Arial Bold, Segoe UI Emoji) and Pillow are required (`pip install pillow`).
 - Horizontal sources fill only about a third of the height. That is the template's design. Use `--crop` if a facecam sits on the video.
 - No word-by-word captions in this layout. For captions use `clip-cutter`.
 - Always credit the original creator. Nothing is posted automatically.
