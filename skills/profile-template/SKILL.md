@@ -5,7 +5,7 @@ description: Render a clip in the user's own profile template (black background,
 
 # Profile template
 
-The template is self-contained: `scripts/profile_render.py` (renderer) and `profile/profile.json` + `profile/avatar.png` (name, handle, avatar; edit them to change the page identity). Ported from the user's gta6-viral pipeline.
+The template is self-contained: `scripts/profile_render.py` (renderer) and `profile/profile.json` + `profile/avatar.png` (name, handle, avatar; edit them to change the page identity). Shared with `viral/pipeline.py`, which imports its header helpers, so there is one layout implementation.
 
 ## Steps
 

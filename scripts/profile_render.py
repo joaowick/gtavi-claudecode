@@ -72,36 +72,53 @@ def text_png(text, path, size=40, max_w=648, line_h=54):
     return len(lines)
 
 
-def render(src, out, *, name, handle, avatar, text, credit=None, bottom=None, crop=None):
-    """crop = (y0, y1) pixel rows of the source to keep."""
-    w, h, dur = probe(src)
-    cw, ch = (w, crop[1] - crop[0]) if crop else (w, h)
+def make_header_png(text):
+    """Draw the header text to a PNG in the temp dir. Returns (path, number_of_lines)."""
     tpng = Path(tempfile.gettempdir()) / f"hdr_{zlib.crc32(text.encode('utf-8')):08x}.png"
-    nlines = text_png(header_safe(text), tpng)
+    return tpng, text_png(header_safe(text), tpng)
+
+
+def header_filters(vin, dur, cw, ch, nlines, ai, ti, name, handle, bottom=None):
+    """ffmpeg filter parts for the profile layout. vin: label of the video stream (size cw x ch);
+    ai/ti: input indexes of the avatar and the text PNG. Returns (parts, last_label, win_y, fw, fh, fx)."""
     win_y = 215 + nlines * 54 + 20
     avail = 1280 - win_y - (110 if bottom else 20)
     sc = min(720 / cw, avail / ch)
     fw, fh = int(cw * sc) // 2 * 2, int(ch * sc) // 2 * 2
     fx = (720 - fw) // 2
-    pre = f"[0:v]crop=iw:{crop[1] - crop[0]}:0:{crop[0]}[s];[s]" if crop else "[0:v]"
     parts = [
         f"color=c=black:s=720x1280:d={dur}[bg0]",
-        f"{pre}scale={fw}:{fh},setsar=1[fg]",
+        f"{vin}scale={fw}:{fh},setsar=1[fg]",
         f"[bg0][fg]overlay={fx}:{win_y}[m0]",
-        "[1:v]scale=96:96,format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(hypot(X-48,Y-48),48),255,0)'[av]",
+        f"[{ai}:v]scale=96:96,format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':"
+        "a='if(lte(hypot(X-48,Y-48),48),255,0)'[av]",
         "[m0][av]overlay=36:60[m1]",
         f"[m1]drawtext=fontfile='{FONT}':text='{esc(name)}':fontcolor=white:fontsize=38:x=150:y=68[m2]",
         f"[m2]drawtext=fontfile='{FONT}':text='{esc(handle)}':fontcolor=0x9aa3b2:fontsize=30:x=150:y=114[m3]",
-        "[m3][2:v]overlay=36:211[last]",
+        f"[m3][{ti}:v]overlay=36:211[tx]",
     ]
-    last = "last"
+    last = "tx"
     if bottom:
         parts.append(f"[{last}]drawtext=fontfile='{FONT}':text='{esc(font_safe(bottom))}':fontcolor=black:fontsize=44:"
                      f"box=1:boxcolor=white:boxborderw=16:x=(w-text_w)/2:y={win_y + fh + 40}[bt]")
         last = "bt"
+    return parts, last, win_y, fw, fh, fx
+
+
+def credit_filter(last, win_y, fx):
+    return lambda credit: (f"[{last}]drawtext=fontfile='{FONT}':text='{esc(font_safe(credit))}':fontcolor=white:fontsize=26:"
+                           f"box=1:boxcolor=black@0.55:boxborderw=8:x={fx + 14}:y={win_y + 12}[cr]")
+
+
+def render(src, out, *, name, handle, avatar, text, credit=None, bottom=None, crop=None):
+    """Standalone render of one video in the profile layout. crop = (y0, y1) source pixel rows to keep."""
+    w, h, dur = probe(src)
+    cw, ch = (w, crop[1] - crop[0]) if crop else (w, h)
+    tpng, nlines = make_header_png(text)
+    vin = f"[0:v]crop=iw:{crop[1] - crop[0]}:0:{crop[0]}[s];[s]" if crop else "[0:v]"
+    parts, last, win_y, fw, fh, fx = header_filters(vin, dur, cw, ch, nlines, 1, 2, name, handle, bottom)
     if credit:
-        parts.append(f"[{last}]drawtext=fontfile='{FONT}':text='{esc(font_safe(credit))}':fontcolor=white:fontsize=26:"
-                     f"box=1:boxcolor=black@0.55:boxborderw=8:x={fx + 14}:y={win_y + 12}[cr]")
+        parts.append(credit_filter(last, win_y, fx)(credit))
         last = "cr"
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-i", str(avatar), "-i", str(tpng),
                     "-filter_complex", ";".join(parts), "-map", f"[{last}]", "-map", "0:a?",

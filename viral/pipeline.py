@@ -18,8 +18,9 @@ from pathlib import Path
 
 HERE = Path(__file__).parent
 PROFILE = HERE.parent / "profile"
+sys.path.insert(0, str(HERE.parent / "scripts"))   # python -I nao inclui pastas extras
+from profile_render import FONT, probe, esc, font_safe, header_safe, make_header_png, header_filters, credit_filter  # noqa: E402
 WORK, OUT, BROLL = HERE / "work", HERE / "output", HERE / "broll"
-FONT = r"C\:/Windows/Fonts/arialbd.ttf"
 TALK_WPM = 65            # palavras/min acima disso => conteudo falado. Calibrado em 15 clipes: dialogo de trailer ~55, clipes de streamer ~70; podcast deve ficar em 130+
 HASHTAGS = "#gta6 #gtavi #grandtheftauto6"
 
@@ -27,13 +28,6 @@ HASHTAGS = "#gta6 #gtavi #grandtheftauto6"
 # ---------- utilidades ----------
 def run(cmd, **kw):
     return subprocess.run(cmd, check=True, capture_output=True, **kw)
-
-
-def probe(path):
-    r = run(["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries",
-             "stream=width,height:format=duration", "-of", "json", str(path)])
-    j = json.loads(r.stdout)
-    return j["streams"][0]["width"], j["streams"][0]["height"], float(j["format"]["duration"])
 
 
 def detect_window(path, thresh=6.0):
@@ -58,11 +52,6 @@ def detect_window(path, thresh=6.0):
     if best[1] - best[0] >= 0.9 * h or best[1] - best[0] < 0.1 * h:
         return None
     return int(best[0] / k) + 2, int(best[1] / k) - 2                     # margem p/ nao pegar borda preta
-
-
-def esc(s):  # escape para o drawtext do ffmpeg
-    return (s.replace("\\", "\\\\").replace("'", "’").replace(":", r"\:")
-             .replace("%", r"\%").replace(",", r"\,"))
 
 
 # ---------- 1) obter o video ----------
@@ -241,65 +230,6 @@ def plan_broll(words, dur, clips):
     return cuts
 
 
-def font_safe(s):
-    """Tira emoji/simbolos que a fonte do drawtext nao desenha (mantem acentos e pontuacao comum)."""
-    return re.sub(r"\s+", " ", re.sub(r"[^\w\s!?.,'\u2019\x22\u201c\u201d:;()%/@\-]", "", s, flags=re.U)).strip()
-
-
-BOLD_FONT = r"C:\Windows\Fonts\arialbd.ttf"
-EMOJI_FONT = r"C:\Windows\Fonts\seguiemj.ttf"
-
-
-def is_emoji_char(ch):
-    return ord(ch) >= 0x2190 or ord(ch) in (0xFE0F, 0x200D)
-
-
-def header_safe(s):
-    """Como font_safe, mas mantem emoji (o cabecalho desenha emoji colorido, em qualquer posicao)."""
-    keep = re.sub(r"[^\w\s!?.,'\u2019\x22\u201c\u201d:;()%/@\-\u2190-\U0010ffff\ufe0f\u200d]", "", s, flags=re.U)
-    return re.sub(r"\s+", " ", keep).strip()
-
-
-def text_png(text, path, size=40, max_w=648, line_h=54):
-    """Desenha o texto do cabecalho num PNG transparente: letras em Arial Bold branco, emoji coloridos
-    (Segoe UI Emoji) onde estiverem. Quebra linhas pela largura real. Devolve o numero de linhas."""
-    from PIL import Image, ImageDraw, ImageFont
-    tf, ef = ImageFont.truetype(BOLD_FONT, size), ImageFont.truetype(EMOJI_FONT, size)
-
-    def runs(s):                                   # [[texto, fonte]] agrupando por tipo de caractere
-        out = []
-        for ch in s:
-            f = ef if is_emoji_char(ch) else tf
-            if out and out[-1][1] is f:
-                out[-1][0] += ch
-            else:
-                out.append([ch, f])
-        return out
-
-    def width(s):
-        return sum(f.getlength(x) for x, f in runs(s))
-
-    lines, cur = [], ""
-    for word in text.split(" "):
-        trial = (cur + " " + word).strip()
-        if cur and width(trial) > max_w:
-            lines.append(cur)
-            cur = word
-        else:
-            cur = trial
-    if cur:
-        lines.append(cur)
-    im = Image.new("RGBA", (max_w + 72, line_h * max(len(lines), 1) + 24), (0, 0, 0, 0))
-    d = ImageDraw.Draw(im)
-    for i, ln in enumerate(lines):
-        x, base = 0, i * line_h + 40
-        for x_txt, f in runs(ln):
-            d.text((x, base), x_txt, font=f, fill=(255, 255, 255, 255), anchor="ls", embedded_color=(f is ef))
-            x += f.getlength(x_txt)
-    im.save(path)
-    return len(lines)
-
-
 def render(src, plan, words, out):
     w, h, dur = probe(src)
     dur = min(dur, plan.get("trim_end") or dur)
@@ -323,37 +253,14 @@ def render(src, plan, words, out):
     prof = plan.get("profile")
     if prof:
         # layout "como o original": fundo preto, cabecalho (avatar redondo + nome + @) + texto, janela do video abaixo
-        import zlib
         txt = prof["text"] + (" " + prof["emoji"] if prof.get("emoji") else "")   # emoji_pt = emoji no fim do texto
-        tpng = WORK / f"hdr_{zlib.crc32(txt.encode('utf-8')):08x}.png"
-        nlines = text_png(header_safe(txt), tpng)
-        win_y = 215 + nlines * 54 + 20
+        tpng, nlines = make_header_png(txt)
         cw, ch = (w, plan["crop"][1] - plan["crop"][0]) if plan.get("crop") else (w, h)
-        avail = 1280 - win_y - (110 if plan.get("bottom_text") else 20)
-        sc = min(720 / cw, avail / ch)
-        fw, fh = int(cw * sc) // 2 * 2, int(ch * sc) // 2 * 2
-        fx = (720 - fw) // 2
-        inputs += ["-i", str(prof["avatar"])]
-        ai = len(inputs) // 2 - 1
-        parts += [
-            f"color=c=black:s=720x1280:d={dur}[bg0]",
-            f"{vin}scale={fw}:{fh},setsar=1[fg]",
-            f"[bg0][fg]overlay={fx}:{win_y}[m0]",
-            f"[{ai}:v]scale=96:96,format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':"
-            f"a='if(lte(hypot(X-48,Y-48),48),255,0)'[av]",
-            "[m0][av]overlay=36:60[m1]",
-            f"[m1]drawtext=fontfile='{FONT}':text='{esc(prof['name'])}':fontcolor=white:fontsize=38:x=150:y=68[m2]",
-            f"[m2]drawtext=fontfile='{FONT}':text='{esc(prof['handle'])}':fontcolor=0x9aa3b2:fontsize=30:x=150:y=114[m3]",
-        ]
-        last = "m3"
-        inputs += ["-i", str(tpng)]
-        ti = len(inputs) // 2 - 1
-        parts.append(f"[{last}][{ti}:v]overlay=36:211[tx]")      # linha de base do 1o texto ~ y=251
-        last = "tx"
-        if plan.get("bottom_text"):
-            parts.append(f"[{last}]drawtext=fontfile='{FONT}':text='{esc(font_safe(plan['bottom_text']))}':fontcolor=black:"
-                         f"fontsize=44:box=1:boxcolor=white:boxborderw=16:x=(w-text_w)/2:y={win_y + fh + 40}[bt]")
-            last = "bt"
+        inputs += ["-i", str(prof["avatar"]), "-i", str(tpng)]
+        ai = len(inputs) // 2 - 2
+        hparts, last, win_y, fw, fh, fx = header_filters(vin, dur, cw, ch, nlines, ai, ai + 1, prof["name"], prof["handle"],
+                                                         plan.get("bottom_text"))
+        parts += hparts
     else:
         if abs(ratio - 9 / 16) < 0.02:
             parts.append(f"{vin}scale=720:1280,setsar=1[m]")
