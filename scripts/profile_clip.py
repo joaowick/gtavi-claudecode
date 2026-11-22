@@ -22,6 +22,8 @@ def main():
     ap.add_argument("--pick", type=int, help="candidate number from candidates.md")
     ap.add_argument("--start", type=float)
     ap.add_argument("--end", type=float)
+    ap.add_argument("--cut", help="keep only these parts, seconds relative to the clip start, e.g. 0-11,28.5-39.8")
+    ap.add_argument("--suffix", default="", help="added to the output name, e.g. _short")
     ap.add_argument("--text", required=True, help="header text (Portuguese); emoji allowed")
     ap.add_argument("--credit", help="credit label; default 'Vídeo: @<channel>'")
     ap.add_argument("--bottom", help="optional white pill under the video")
@@ -49,9 +51,15 @@ def main():
     chan = cand["info"].get("uploader_id") or "@" + cand["info"].get("channel", "")
     tmp = job / "edits" / f"_raw_{n}.mp4"
     tmp.parent.mkdir(exist_ok=True)
-    subprocess.run([tool("ffmpeg"), "-v", "error", "-y", "-ss", str(s0), "-to", str(e0), "-i", str(src),
-                    "-c:v", "libx264", "-crf", "18", "-c:a", "aac", str(tmp)], check=True)
-    out = job / "edits" / f"clip_{n}_profile.mp4"
+    ff = [tool("ffmpeg"), "-v", "error", "-y", "-ss", str(s0), "-to", str(e0), "-i", str(src)]
+    if a.cut:
+        segs = [tuple(float(v) for v in x.split("-")) for x in a.cut.split(",")]
+        f = "".join(f"[0:v]trim={x}:{y},setpts=PTS-STARTPTS[v{i}];[0:a]atrim={x}:{y},asetpts=PTS-STARTPTS[a{i}];"
+                    for i, (x, y) in enumerate(segs))
+        f += "".join(f"[v{i}][a{i}]" for i in range(len(segs))) + f"concat=n={len(segs)}:v=1:a=1[v][a]"
+        ff += ["-filter_complex", f, "-map", "[v]", "-map", "[a]"]
+    subprocess.run(ff + ["-c:v", "libx264", "-crf", "18", "-c:a", "aac", str(tmp)], check=True)
+    out = job / "edits" / f"clip_{n}_profile{a.suffix}.mp4"
     profile_render.render(
         tmp, out, name=a.name or pr["name"], handle=a.handle or pr["handle"],
         avatar=Path(a.avatar) if a.avatar else PROFILE / pr["avatar"], text=a.text,
