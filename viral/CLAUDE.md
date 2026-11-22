@@ -47,6 +47,8 @@ No tests or linter. Verify changes by running the batch and looking at frames fr
 
 - **Scheduled publishing verified 2026-11-22:** with Cloudflare R2 storage (`STORAGE_PROVIDER=cloudflare` + `CLOUDFLARE_*` in `postiz/.env`, public `r2.dev` bucket URL) videos get a permanent public link, so no tunnel is needed. `publish.py --mode schedule --yes --ids <id>` queued a post that Postiz published by itself at the scheduled minute (clip `2123086044119605248`, 18:12 local). Requirements: PC on and Docker running at that time; check state with `select state, "releaseURL" from "Post"` in the postiz-postgres container. Optional: R2 lifecycle rule to delete objects after 30 days (not set; nothing deletes uploaded videos automatically).
 
+- **Public visibility (verified 2026-11-22):** while the Meta app is in Development mode, posts it publishes are only visible to people with a role on the app (a non-role viewer was redirected to another video). After switching the app to **Live** (Meta dashboard > Publish; needs privacy policy URL `https://joaowick.github.io/gtavi-claudecode/privacy.html`, data-deletion URL `https://joaowick.github.io/gtavi-claudecode/deletion/` (https is required), app icon, category; pages live in `docs/`), a NEW scheduled post played for a non-role viewer. Posts made in Development mode stay restricted; republish if they matter. No full App Review was needed for posting to our own Page.
+
 ## Review sheet and text editor
 
 - `serve.py` listens on 127.0.0.1 only; the page carries a random token, `POST /api/apply/<id>` needs it (`X-Token`) and a valid `Host`. The editor changes **content only** (header text, emoji, bottom pill, cover-bar text, hook, post caption, name/handle), never layout.
