@@ -1,5 +1,5 @@
-"""Render a clip in the 'profile header' template (black background, round avatar + name + handle,
-Portuguese text, video window below, credit label). Uses scripts/profile_render.py and profile/.
+"""Render a clip in the 'profile header' template (blurred background, round avatar + name + handle,
+Portuguese text, video window below, credit label, optional PT/EN subtitles in GTA VI style). Uses scripts/profile_render.py and profile/.
 
   python scripts/profile_clip.py jobs/<id> --pick 4 --text "A polícia rastreia carro roubado 🚔"
 
@@ -81,7 +81,11 @@ def main():
                                            "phrases not in it are translated online. --list-phrases prints them.")
     ap.add_argument("--list-phrases", action="store_true", help="print the subtitle phrases and stop")
     ap.add_argument("--sub-style", choices=["gtavi", "plain"], default="gtavi")
-    ap.add_argument("--bg", choices=["black", "blur"], default="black", help="canvas behind the video")
+    ap.add_argument("--bg", choices=["black", "blur"], default="blur", help="canvas behind the video")
+    ap.add_argument("--label", help="name used in the output file instead of the candidate number")
+    ap.add_argument("--queue", action="store_true",
+                    help="register the clip in viral/output/queue.json (pending_review) so it shows in the review sheet")
+    ap.add_argument("--caption", help="post caption for --queue (default: header text + credit + hashtags)")
     ap.add_argument("--suffix", default="", help="added to the output name, e.g. _short")
     ap.add_argument("--text", required=True, help="header text (Portuguese); emoji allowed")
     ap.add_argument("--credit", help="credit label; default 'Vídeo: @<channel>'")
@@ -104,7 +108,7 @@ def main():
         s0, e0 = a.start, a.end
     if s0 is None or e0 is None:
         sys.exit("give --pick or --start and --end")
-    n = a.pick or int(s0)
+    n = a.label or a.pick or int(s0)
 
     pr = json.loads((PROFILE / "profile.json").read_text(encoding="utf-8"))
     chan = cand["info"].get("uploader_id") or "@" + cand["info"].get("channel", "")
@@ -136,6 +140,32 @@ def main():
         crop=tuple(int(v) for v in a.crop.split(":")) if a.crop else None, subs=subs, sub_style=a.sub_style, bg=a.bg)
     tmp.unlink(missing_ok=True)
     print(out)
+    if a.queue:
+        register(out, cand["info"], chan, a)
+
+
+def register(out, info, chan, a):
+    """Copy the clip to viral/output and add it to queue.json as pending_review. Marked custom_render so the
+    review editor does not re-render it with the batch layout (that would lose the cut and the subtitles)."""
+    import datetime, shutil
+    vroot = Path(__file__).parent.parent / "viral" / "output"
+    vid = f"yt_{info['id']}_{int(a.start if a.start is not None else a.pick or 0)}"
+    qfile = vroot / "queue.json"
+    q = json.loads(qfile.read_text(encoding="utf-8")) if qfile.exists() else {}
+    if vid in q:
+        sys.exit(f"{vid} already in queue.json; remove it first to re-register")
+    shutil.copy2(qfile, vroot / f"queue.bak.{datetime.datetime.now():%Y%m%d%H%M%S}.json") if qfile.exists() else None
+    shutil.copy2(out, vroot / f"{vid}.mp4")
+    tags = "#gta6 #gtavi #grandtheftauto6"
+    caption = a.caption or "\n\n".join([a.text, f"Vídeo: {chan} (YouTube)", tags])
+    w, h, dur = profile_render.probe(vroot / f"{vid}.mp4")
+    q[vid] = {"source": info["webpage_url"], "file": f"{vid}.mp4", "type": "gameplay", "lang": "pt",
+              "duration": round(dur, 1), "hook": [a.text], "caption": caption, "original_caption": info.get("title", ""),
+              "author": chan, "credit": a.credit or f"Vídeo: {chan}", "caption_translated": False,
+              "status": "pending_review", "text_pt": a.text, "hook_pt": [a.text], "caption_pt": caption,
+              "custom_render": "scripts/profile_clip.py"}
+    qfile.write_text(json.dumps(q, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"queued as {vid} (pending_review)")
 
 
 if __name__ == "__main__":

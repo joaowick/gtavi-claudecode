@@ -300,6 +300,9 @@ def render(src, plan, words, out):
 def rebuild(vid, item, out=None):
     """Refaz o short de um item do queue.json usando so o que esta salvo nele.
     Reaproveita o recorte ja calculado (item["crop"]); se nunca houve, detecta uma vez e guarda."""
+    if item.get("custom_render"):
+        raise ValueError(f"este clipe foi renderizado por {item['custom_render']} (cortes e legendas); "
+                         "refaca por la, nao pelo editor")
     src = WORK / vid / "src.mp4"
     words = transcribe(src)[0] if item["type"] == "talk" else []
     if "crop" not in item:

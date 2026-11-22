@@ -5,6 +5,8 @@ description: Render a clip in the user's own profile template (black background,
 
 # Profile template
 
+Default look: blurred background (`--bg black` for plain black), GTA VI subtitles in Pricedown when `fonts/pricedown/` exists (git-ignored, EULA forbids sharing the file; falls back to Impact).
+
 The template is self-contained: `scripts/profile_render.py` (renderer) and `profile/profile.json` + `profile/avatar.png` (name, handle, avatar; edit them to change the page identity). Shared with `viral/pipeline.py`, which imports its header helpers, so there is one layout implementation.
 
 ## Steps
@@ -15,6 +17,7 @@ The template is self-contained: `scripts/profile_render.py` (renderer) and `prof
    ```
    python scripts/profile_clip.py jobs/<id> --pick <n> --text "A polícia rastreia carro roubado no GTA 6 🚔"
    ```
+   Subtitles: `--subs pt-en` (PT main, EN second line) with `--translations file.json` ({pt phrase: en}; `--list-phrases` prints the phrases; Google Translate rate-limits fast, so translating them yourself is safest). `--cut "0-11,28.5-39.8"` joins parts (seconds relative to the clip start). `--label` names the file, `--queue` registers the clip in `viral/output/queue.json` as `pending_review` (then review/approve in `viral/serve.py`; the editor will not re-render it, by design).
    Optional: `--credit "Vídeo: @canal"` (default is the source channel), `--bottom "texto"` (white pill under the video), `--crop y0:y1` (keep only those pixel rows, to drop a facecam), `--name/--handle/--avatar`, `--start/--end` instead of `--pick`.
 4. Output: `jobs/<id>/edits/clip_<n>_profile.mp4` (720x1280). Extract one frame with ffmpeg and look at it before saying it is done.
 
