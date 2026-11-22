@@ -43,6 +43,8 @@ No tests or linter. Verify changes by running the batch and looking at frames fr
 - Local Postiz: `viral/postiz/` (`docker-compose.yaml`, `.env` with secrets, `README.md` with setup steps). Docker was not installed when this was written, so the compose file has **not been run**. Local API base: `http://localhost:4007/api/public/v1`.
 - Add "Facebook Reels" to the agenda's network list before scheduling. Untested against a real Postiz instance (no key yet): payload follows docs.postiz.com (`POST /posts`, `/upload`); Postiz's Facebook docs have no explicit Reels field, third-party docs say videos go out as Reels.
 
+- **Verified 2026-11-22:** a real publish works (clip `yt_H1nQM59dBO8_693` -> Facebook Page `GTA6Viral`, `--mode now`). Postiz hands the video to Facebook as a `file_url`, so the upload URL must be public: with the default `http://localhost:4007` the post ends in `ERROR` ("Unknown Error", nothing is posted). Open `postiz/tunnel.ps1` first (needs `DISABLE_REGISTRATION: 'true'`, already set), publish, then `tunnel.ps1 -Stop`. Meta app needs the "Manage everything on your Page" use case for `pages_manage_posts` etc. `publish.py` writes `published.json` even if Postiz fails later: check the post state in Postiz (or its DB) and clear the entry before retrying. `--mode draft` stamps the draft with the current time, not the agenda time. Always pass `--ids`.
+
 ## Review sheet and text editor
 
 - `serve.py` listens on 127.0.0.1 only; the page carries a random token, `POST /api/apply/<id>` needs it (`X-Token`) and a valid `Host`. The editor changes **content only** (header text, emoji, bottom pill, cover-bar text, hook, post caption, name/handle), never layout.

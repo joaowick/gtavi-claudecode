@@ -18,7 +18,7 @@ services:
       BACKEND_INTERNAL_URL: 'http://localhost:3000'
       TEMPORAL_ADDRESS: 'temporal:7233'
       IS_GENERAL: 'true'
-      DISABLE_REGISTRATION: 'false'      # depois de criar sua conta, mude para 'true'
+      DISABLE_REGISTRATION: 'true'      # conta ja criada
       RUN_CRON: 'true'
       STORAGE_PROVIDER: 'local'
       UPLOAD_DIRECTORY: '/uploads'
