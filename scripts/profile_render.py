@@ -79,7 +79,7 @@ def make_header_png(text):
     return tpng, text_png(header_safe(text), tpng)
 
 
-def header_filters(vin, dur, cw, ch, nlines, ai, ti, name, handle, bottom=None):
+def header_filters(vin, dur, cw, ch, nlines, ai, ti, name, handle, bottom=None, bg="black"):
     """ffmpeg filter parts for the profile layout. vin: label of the video stream (size cw x ch);
     ai/ti: input indexes of the avatar and the text PNG. Returns (parts, last_label, win_y, fw, fh, fx)."""
     win_y = 215 + nlines * 54 + 20
@@ -87,9 +87,14 @@ def header_filters(vin, dur, cw, ch, nlines, ai, ti, name, handle, bottom=None):
     sc = min(720 / cw, avail / ch)
     fw, fh = int(cw * sc) // 2 * 2, int(ch * sc) // 2 * 2
     fx = (720 - fw) // 2
-    parts = [
-        f"color=c=black:s=720x1280:d={dur}[bg0]",
-        f"{vin}scale={fw}:{fh},setsar=1[fg]",
+    if bg == "blur":   # blurred, darkened, zoomed copy of the video fills the whole canvas
+        first = [f"{vin}split[sa][sb]",
+                 "[sa]scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,boxblur=30:6,"
+                 "eq=brightness=-0.22:saturation=1.1[bg0]",
+                 f"[sb]scale={fw}:{fh},setsar=1[fg]"]
+    else:
+        first = [f"color=c=black:s=720x1280:d={dur}[bg0]", f"{vin}scale={fw}:{fh},setsar=1[fg]"]
+    parts = first + [
         f"[bg0][fg]overlay={fx}:{win_y}[m0]",
         f"[{ai}:v]scale=96:96,format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':"
         "a='if(lte(hypot(X-48,Y-48),48),255,0)'[av]",
@@ -144,13 +149,13 @@ def build_subs_ass(subs, y, path, style="gtavi"):
     Path(path).write_text(head + ev, encoding="utf-8")
 
 
-def render(src, out, *, name, handle, avatar, text, credit=None, bottom=None, crop=None, subs=None, sub_style="gtavi"):
+def render(src, out, *, name, handle, avatar, text, credit=None, bottom=None, crop=None, subs=None, sub_style="gtavi", bg="black"):
     """Standalone render of one video in the profile layout. crop = (y0, y1) source pixel rows to keep."""
     w, h, dur = probe(src)
     cw, ch = (w, crop[1] - crop[0]) if crop else (w, h)
     tpng, nlines = make_header_png(text)
     vin = f"[0:v]crop=iw:{crop[1] - crop[0]}:0:{crop[0]}[s];[s]" if crop else "[0:v]"
-    parts, last, win_y, fw, fh, fx = header_filters(vin, dur, cw, ch, nlines, 1, 2, name, handle, bottom)
+    parts, last, win_y, fw, fh, fx = header_filters(vin, dur, cw, ch, nlines, 1, 2, name, handle, bottom, bg)
     if credit:
         parts.append(credit_filter(last, win_y, fx)(credit))
         last = "cr"

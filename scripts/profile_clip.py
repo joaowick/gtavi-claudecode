@@ -81,6 +81,7 @@ def main():
                                            "phrases not in it are translated online. --list-phrases prints them.")
     ap.add_argument("--list-phrases", action="store_true", help="print the subtitle phrases and stop")
     ap.add_argument("--sub-style", choices=["gtavi", "plain"], default="gtavi")
+    ap.add_argument("--bg", choices=["black", "blur"], default="black", help="canvas behind the video")
     ap.add_argument("--suffix", default="", help="added to the output name, e.g. _short")
     ap.add_argument("--text", required=True, help="header text (Portuguese); emoji allowed")
     ap.add_argument("--credit", help="credit label; default 'Vídeo: @<channel>'")
@@ -132,7 +133,7 @@ def main():
         tmp, out, name=a.name or pr["name"], handle=a.handle or pr["handle"],
         avatar=Path(a.avatar) if a.avatar else PROFILE / pr["avatar"], text=a.text,
         credit=a.credit or f"Vídeo: {chan}", bottom=a.bottom,
-        crop=tuple(int(v) for v in a.crop.split(":")) if a.crop else None, subs=subs, sub_style=a.sub_style)
+        crop=tuple(int(v) for v in a.crop.split(":")) if a.crop else None, subs=subs, sub_style=a.sub_style, bg=a.bg)
     tmp.unlink(missing_ok=True)
     print(out)
 
