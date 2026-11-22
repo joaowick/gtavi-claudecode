@@ -19,7 +19,7 @@ Regras estáveis e comandos: `viral/CLAUDE.md`. Este arquivo é só o "onde para
 ## Como conferir os posts
 
 - Estado no Postiz: `docker compose exec -T postiz-postgres psql -U postiz-user -d postiz-db-local -At -c "select state, \"publishDate\", \"releaseURL\" from \"Post\" order by \"publishDate\""` (rodar em `viral/postiz`). Estados: `QUEUE` (aguardando), `PUBLISHED`, `ERROR`.
-- `publish.py` precisa de `POSTIZ_API_KEY` e `POSTIZ_URL=http://localhost:4007/api/public/v1` no ambiente (a chave NÃO fica no projeto; gerar em Postiz > Settings > Developers). Sempre passar `--ids`.
+- `publish.py` lê `POSTIZ_API_KEY` e `POSTIZ_URL` do ambiente ou de `viral/postiz/.env` (local, fora do git). A chave não expira: copiar uma vez de Postiz > Settings > Developers. Sempre passar `--ids`.
 - `publish.py` grava `output/published.json` mesmo se o Postiz falhar depois: conferir o estado e limpar a entrada antes de reenviar.
 
 ## Lembretes / próximos passos

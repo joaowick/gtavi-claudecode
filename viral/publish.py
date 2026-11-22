@@ -69,11 +69,27 @@ class Postiz:
         return self._call("POST", "/posts", json.dumps(payload).encode("utf-8"), {"Content-Type": "application/json"})
 
 
+ENV_FILE = HERE / "postiz" / ".env"          # local, fora do git (ver .gitignore)
+
+
+def setting(name):
+    """Variavel de ambiente primeiro; se nao houver, a linha NAME=valor de viral/postiz/.env."""
+    if os.environ.get(name):
+        return os.environ[name]
+    if ENV_FILE.exists():
+        for line in ENV_FILE.read_text(encoding="utf-8").splitlines():
+            k, sep, v = line.partition("=")
+            if sep and k.strip() == name and v.strip():
+                return v.strip().strip("\"'")
+    return None
+
+
 def client():
-    key = os.environ.get("POSTIZ_API_KEY")
+    key = setting("POSTIZ_API_KEY")
     if not key:
-        sys.exit("Defina POSTIZ_API_KEY (Postiz > Settings > Developers > Public API) e, se for self-hosted, POSTIZ_URL.")
-    return Postiz(key, os.environ.get("POSTIZ_URL") or DEFAULT_URL)
+        sys.exit("Defina POSTIZ_API_KEY (Postiz > Settings > Developers > Public API) no ambiente ou em "
+                 "viral/postiz/.env, e, se for self-hosted, POSTIZ_URL.")
+    return Postiz(key, setting("POSTIZ_URL") or DEFAULT_URL)
 
 
 def find_integration(ints, ident):

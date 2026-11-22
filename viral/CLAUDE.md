@@ -39,7 +39,7 @@ No tests or linter. Verify changes by running the batch and looking at frames fr
 
 ## Publishing (Postiz)
 
-- `publish.py` sends scheduled+approved videos through the Postiz public API (`POSTIZ_API_KEY`, `POSTIZ_URL` env vars; never store the key in the project). Only network supported so far: "Facebook Reels" (Postiz `facebook` integration, 3-90 s). Default is a **dry run**; `--yes` really sends; `--mode draft` creates a Postiz draft (safe first test), `now` publishes immediately. State per (video, network) in `output/published.json` (never resent). `--list-integrations` shows connected channels.
+- `publish.py` sends scheduled+approved videos through the Postiz public API (`POSTIZ_API_KEY`, `POSTIZ_URL`: env vars, or lines in the git-ignored `viral/postiz/.env`; never commit the key). Only network supported so far: "Facebook Reels" (Postiz `facebook` integration, 3-90 s). Default is a **dry run**; `--yes` really sends; `--mode draft` creates a Postiz draft (safe first test), `now` publishes immediately. State per (video, network) in `output/published.json` (never resent). `--list-integrations` shows connected channels.
 - Local Postiz: `viral/postiz/` (`docker-compose.yaml`, `.env` with secrets, `README.md` with setup steps). Docker was not installed when this was written, so the compose file has **not been run**. Local API base: `http://localhost:4007/api/public/v1`.
 - Add "Facebook Reels" to the agenda's network list before scheduling. Untested against a real Postiz instance (no key yet): payload follows docs.postiz.com (`POST /posts`, `/upload`); Postiz's Facebook docs have no explicit Reels field, third-party docs say videos go out as Reels.
 
