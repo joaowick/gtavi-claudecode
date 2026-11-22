@@ -1,31 +1,31 @@
-# Para continuar (escrito em 2026-11-18, à noite)
+# Para continuar (atualizado em 2026-11-22, noite)
 
-Contexto geral e regras estáveis estão no `CLAUDE.md` da raiz. Este arquivo é só o "onde paramos".
+Regras estáveis e comandos: `viral/CLAUDE.md`. Este arquivo é só o "onde paramos".
 
 ## Estado
 
-- Pipeline aceita links do **X** e do Instagram; todo vídeo novo sai com o **perfil gta6viral** no cabeçalho, **crédito** do autor (@ no vídeo e na legenda) e legenda **EN -> PT** automática.
-- Fila (`output/queue.json`): **14 aprovados, 4 rejeitados**. Inclui 4 vídeos do X aprovados (ids `2112701124205502464`, `2122454015762157568`, `2115691231041003520`, `2120918584901677056`).
-- `publish.py` (Postiz, **Facebook Reels**) está escrito e testado só em **simulação**. Nunca falou com um Postiz real.
-- `postiz/` tem `docker-compose.yaml`, `.env` (JWT_SECRET gerado), `dynamicconfig/` e `README.md` com o passo a passo. **Docker não estava instalado**, então nada disso foi executado.
-- `serve.py` (revisão + `/agenda`) estava rodando na porta 8765; o desligar do PC derrubou. Reabrir: `.venv\Scripts\python.exe -I serve.py --open`.
+- Fluxo completo validado: clipe (`scripts/profile_clip.py`: template do perfil, blur, legenda PT/EN em Pricedown) -> `--queue` -> aprovar em `serve.py` -> agenda -> `publish.py --mode schedule --yes --ids ...` -> Postiz publica sozinho na Página **GTA6Viral** (Facebook Reels). Vídeos ficam no Cloudflare R2 (link público permanente, sem túnel).
+- App da Meta em modo **Live**; teste com pessoa sem função no app confirmou que o Reel aparece para o público.
+- **11 posts agendados no Postiz (QUEUE)**, 3 por dia às 12:00, 18:00 e 21:00 (Brasília), de 23/11 a 26/11 (o último é 26/11 18:00). Horários são suposição (picos típicos), não dado da Página.
+- **O PC e o Docker (Postiz) precisam estar ligados nesses horários.** Subir o Postiz: `cd viral/postiz && docker compose up -d`.
+- Já publicados: `2123222296424755200` (artes, 22/11) e o glitch/LipaoGamer (versões antigas, restritas; os dois foram reagendados em versão nova).
 
-## Próximos passos (em ordem)
+## Fora da agenda (decisão pendente do usuário)
 
-1. Instalar **Docker Desktop** (Windows 11 Home -> WSL2). Conferir `docker --version`.
-2. Em `viral/postiz/`: `docker compose up -d`, esperar ~2 min, abrir http://localhost:4007, criar conta. Depois por `DISABLE_REGISTRATION: 'true'`.
-3. Criar o **app na Meta** (passos no `postiz/README.md`), preencher `FACEBOOK_APP_ID/SECRET` no `.env`, `docker compose up -d`, conectar a Página em Add Channel > Facebook.
-4. Pegar a chave em Postiz > Settings > Developers e, no PowerShell:
-   `$env:POSTIZ_API_KEY="..."; $env:POSTIZ_URL="http://localhost:4007/api/public/v1"`
-   `.venv\Scripts\python.exe -I publish.py --list-integrations`
-5. Adicionar **"Facebook Reels"** à lista de redes da `/agenda` e agendar um vídeo aprovado.
-6. 1º teste real: `publish.py --mode draft --yes` (cria rascunho, **não publica**). Conferir no Postiz se o vídeo sobe como **Reel** (a doc do Postiz não tem campo explícito de Reels; confirmar).
+- 10 reels do Instagram sem autor/crédito (`DfnmQnyo43s`, `DddUbfiIsFJ`, `Dcjo2biI9Tc`, `Dcjl1y6I4TA`, `DcjgV-II72i`, `Df41aA_NCWr`, `Df4r56cNjnJ`, `Df4klH0Nd-_`, `Df4j5gxNbIc`, `Df4gBp1tDxe`): não agendados por falta de crédito (regra: sempre creditar).
+- 5 datados (lançamento de 19/11): `2122710402199158784` TOMORROW, `2120918584901677056` JUST IN, `2122843166663729152` POV hoje à noite, `2112701124205502464` primeiro comercial, `2123310526721605632` contagem regressiva.
+- Mais de 90 s (limite do Reels): `2122454015762157568`, `2123051789864128512`, `2123044129311764480`.
 
-## Problemas conhecidos / ideias
+## Como conferir os posts
 
-- Vídeos tipo `talk` no X: legendas por palavra saem na língua falada (inglês), sem tradução.
-- Termos como "JUST IN" passam sem tradução no cabeçalho (corrigir no editor do `serve.py`).
-- Tweets só de texto falham no download (esperado, o lote pula).
-- Instagram: o @ do autor vem do comentário `# @perfil` no `reels.txt` (yt-dlp não entrega); não testado de ponta a ponta com reel novo.
-- Direitos: boa parte do material é da Rockstar repostado por terceiros; crédito ajuda mas não resolve. Evitar clipes de vazamento.
-- Só Facebook Reels está implementado em `publish.py`; Instagram/YouTube/TikTok/X são "pulados".
+- Estado no Postiz: `docker compose exec -T postiz-postgres psql -U postiz-user -d postiz-db-local -At -c "select state, \"publishDate\", \"releaseURL\" from \"Post\" order by \"publishDate\""` (rodar em `viral/postiz`). Estados: `QUEUE` (aguardando), `PUBLISHED`, `ERROR`.
+- `publish.py` precisa de `POSTIZ_API_KEY` e `POSTIZ_URL=http://localhost:4007/api/public/v1` no ambiente (a chave NÃO fica no projeto; gerar em Postiz > Settings > Developers). Sempre passar `--ids`.
+- `publish.py` grava `output/published.json` mesmo se o Postiz falhar depois: conferir o estado e limpar a entrada antes de reenviar.
+
+## Lembretes / próximos passos
+
+- **R2 sem limpeza:** aplicar a regra de ciclo de vida (apagar objetos após 30 dias) no bucket `gta6viral-media` (Cloudflare > R2 > bucket > Settings > Object Lifecycle Rules). Há também arquivos de teste no bucket.
+- Depois de ~1 semana de posts: usar a skill `learning-loop` (placar) para ajustar horários e tipos de conteúdo com números reais.
+- Para novos clipes: `scripts/moments.py` -> `scripts/profile_clip.py ... --subs pt-en --translations <json> --queue` (traduções: fazer à mão, o Google Translate limita requisições) -> aprovar -> agendar.
+- Direitos: todo material é de terceiros (crédito no vídeo e na legenda, sem autorização formal).
+- Local e fora do git: `viral/postiz/.env` (segredos da Meta, do R2 e JWT), `fonts/pricedown/` (licença proíbe compartilhar), `viral/output`, `viral/work`, `viral/input`.
