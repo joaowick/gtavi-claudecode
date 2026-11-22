@@ -15,3 +15,6 @@ viral/work/
 viral/input/
 viral/postiz/.env
 viral/__pycache__/
+
+# fonts: licensed, must not be redistributed (Typodermic EULA)
+fonts/
