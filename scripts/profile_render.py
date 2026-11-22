@@ -110,7 +110,29 @@ def credit_filter(last, win_y, fx):
                            f"box=1:boxcolor=black@0.55:boxborderw=8:x={fx + 14}:y={win_y + 12}[cr]")
 
 
-def render(src, out, *, name, handle, avatar, text, credit=None, bottom=None, crop=None):
+def build_subs_ass(subs, y, path):
+    """Bilingual subtitles under the video. subs = [(start, end, main_text, second_text)].
+    Main line: white bold; second line: smaller, italic, yellow. Anchored at the top at y."""
+    def t(x):
+        h, m, sec = int(x // 3600), int(x % 3600 // 60), x % 60
+        return f"{h}:{m:02d}:{sec:05.2f}"
+
+    def clean(x):
+        return x.replace("\\", "").replace("{", "(").replace("}", ")").replace("\n", " ")
+
+    head = ("[Script Info]\nScriptType: v4.00+\nPlayResX: 720\nPlayResY: 1280\nWrapStyle: 0\n\n[V4+ Styles]\n"
+            "Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,"
+            "StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
+            f"Style: Sub,Arial,44,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,2,0,8,40,40,{int(y)},1\n\n"
+            "[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n")
+    ev = ""
+    for a, b, main, second in subs:
+        txt = clean(main) + (r"\N{\fs34\b0\i1\c&H00D7FF&}" + clean(second) if second else "")
+        ev += f"Dialogue: 0,{t(a)},{t(b)},Sub,,0,0,0,,{txt}\n"
+    Path(path).write_text(head + ev, encoding="utf-8")
+
+
+def render(src, out, *, name, handle, avatar, text, credit=None, bottom=None, crop=None, subs=None):
     """Standalone render of one video in the profile layout. crop = (y0, y1) source pixel rows to keep."""
     w, h, dur = probe(src)
     cw, ch = (w, crop[1] - crop[0]) if crop else (w, h)
@@ -120,6 +142,12 @@ def render(src, out, *, name, handle, avatar, text, credit=None, bottom=None, cr
     if credit:
         parts.append(credit_filter(last, win_y, fx)(credit))
         last = "cr"
+    if subs:
+        ass = Path(tempfile.gettempdir()) / f"subs_{zlib.crc32(str(out).encode()):08x}.ass"
+        build_subs_ass(subs, win_y + fh + 50, ass)
+        ass_path = str(ass).replace("\\", "/").replace(":", "\\:")
+        parts.append(f"[{last}]ass='{ass_path}'[sb]")
+        last = "sb"
     subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(src), "-i", str(avatar), "-i", str(tpng),
                     "-filter_complex", ";".join(parts), "-map", f"[{last}]", "-map", "0:a?",
                     "-c:v", "libx264", "-crf", "20", "-preset", "fast", "-c:a", "aac", "-shortest", str(out)],
