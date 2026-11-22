@@ -6,6 +6,7 @@ Fork pessoal (de `joaowick`) do plugin gtavi-claudecode, usado para operar a pá
 
 Estrutura:
 - `scripts/` e `skills/`: ferramentas originais (moments, cut, etc.) mais as adições: `profile_clip.py` / `profile_render.py` (template do perfil, blur, legenda PT/EN estilo GTA VI) e a skill `profile-template`.
+- `skills/gta6viral-rotina`: a rotina completa (conferir, descobrir vídeos, produzir, aprovar, agendar, publicar). Peça "faça a rotina".
 - `viral/`: pipeline de lote, revisão (`serve.py`), agenda, publicação via Postiz (`publish.py`) e o Postiz local (`viral/postiz/`, Docker).
 - `profile/`: nome, handle e avatar da página (usados por tudo).
 - `docs/`: política de privacidade e exclusão de dados (GitHub Pages), exigidas pela Meta.
