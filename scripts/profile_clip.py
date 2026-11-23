@@ -31,7 +31,7 @@ def translate_retry(t_en, text, tries=5):
     sys.exit(f"translation failed for: {text!r} (rate limit?). Try again in a minute or use --subs pt.")
 
 
-def make_subs(words, segs, t_en, max_words=7, known=None):
+def make_subs(words, segs, t_en, max_words=7, known=None, src_en=False):
     """Phrases with times mapped onto the cut timeline. Split on pauses > 0.6 s / end punctuation, long ones
     in chunks of <= max_words; chunks of 1-2 words are merged into a neighbour."""
     out, off = [], 0.0
@@ -57,7 +57,10 @@ def make_subs(words, segs, t_en, max_words=7, known=None):
                 merged.append(c)
         for ch in merged:
             pt = clean(" ".join(w["w"] for w in ch))
-            en = (known or {}).get(pt) or (clean(translate_retry(t_en, pt)) if t_en else "")
+            if src_en:                               # spoken English: main line = Portuguese from `known`, second = original
+                en, pt = pt, (known or {}).get(pt) or sys.exit(f"missing Portuguese translation for: {pt!r}")
+            else:
+                en = (known or {}).get(pt) or (clean(translate_retry(t_en, pt)) if t_en else "")
             a_ = ch[0]["s"] - x + off
             b_ = min(ch[-1]["e"] - x + off + 0.4, y - x + off)
             out.append([max(a_, 0.0), max(b_, a_ + 1.2), pt, en])
@@ -79,6 +82,9 @@ def main():
                     help="burn subtitles under the video: pt-en = Portuguese main + English second line")
     ap.add_argument("--translations", help="JSON {portuguese phrase: english} used before Google Translate; "
                                            "phrases not in it are translated online. --list-phrases prints them.")
+    ap.add_argument("--src-lang", choices=["pt", "en"], default="pt",
+                    help="spoken language of the source. en: --translations maps English phrase -> Portuguese; "
+                         "the Portuguese goes on the main line and the original English below it")
     ap.add_argument("--list-phrases", action="store_true", help="print the subtitle phrases and stop")
     ap.add_argument("--sub-style", choices=["gtavi", "plain"], default="gtavi")
     ap.add_argument("--bg", choices=["black", "blur"], default="blur", help="canvas behind the video")
@@ -120,8 +126,10 @@ def main():
         words = [dict(w=x["w"], s=x["s"] - s0, e=x["e"] - s0) for x in load_json(job / "transcript.json")
                  if s0 <= x["s"] < e0]
         known = load_json(Path(a.translations)) if a.translations else {}
-        need = a.subs == "pt-en" and not a.list_phrases
-        subs = make_subs(words, segs, translator("en") if need else None, known=known)
+        src_en = a.src_lang == "en"
+        need = a.subs == "pt-en" and not a.list_phrases and not src_en
+        subs = make_subs(words, segs, translator("en") if need else None, known=known,
+                         src_en=src_en and not a.list_phrases)
         if a.list_phrases:
             print(json.dumps([x[2] for x in subs], ensure_ascii=False, indent=1))
             return

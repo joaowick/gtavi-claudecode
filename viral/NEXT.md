@@ -1,4 +1,4 @@
-# Para continuar (atualizado em 2026-11-22, noite)
+# Para continuar (atualizado em 2026-11-23)
 
 Regras estáveis e comandos: `viral/CLAUDE.md`. Este arquivo é só o "onde paramos".
 
@@ -6,7 +6,7 @@ Regras estáveis e comandos: `viral/CLAUDE.md`. Este arquivo é só o "onde para
 
 - Fluxo completo validado: clipe (`scripts/profile_clip.py`: template do perfil, blur, legenda PT/EN em Pricedown) -> `--queue` -> aprovar em `serve.py` -> agenda -> `publish.py --mode schedule --yes --ids ...` -> Postiz publica sozinho na Página **GTA6Viral** (Facebook Reels). Vídeos ficam no Cloudflare R2 (link público permanente, sem túnel).
 - App da Meta em modo **Live**; teste com pessoa sem função no app confirmou que o Reel aparece para o público.
-- **11 posts agendados no Postiz (QUEUE)**, 3 por dia às 12:00, 18:00 e 21:00 (Brasília), de 23/11 a 26/11 (o último é 26/11 18:00). Horários são suposição (picos típicos), não dado da Página.
+- **21 posts agendados no Postiz (QUEUE)**, 3 por dia às 12:00, 18:00 e 21:00 (Brasília), de 23/11 a 29/11 (o último é 29/11 21:00). Os 10 últimos (26/11 21:00 a 29/11) vêm do walkthrough do MKIceAndFire (`jobs/r97eovd1nr4-*`, ids `yt_R97EoVD1nr4_*`; fonte em inglês, `profile_clip.py --src-lang en`; legendas vindas de transcrição automática, podem ter erros). Horários são suposição (picos típicos), não dado da Página.
 - **O PC e o Docker (Postiz) precisam estar ligados nesses horários.** Subir o Postiz: `cd viral/postiz && docker compose up -d`.
 - Já publicados: `2123222296424755200` (artes, 22/11) e o glitch/LipaoGamer (versões antigas, restritas; os dois foram reagendados em versão nova).
 
