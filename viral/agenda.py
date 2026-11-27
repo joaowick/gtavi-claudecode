@@ -5,6 +5,7 @@ A pagina so e servida por `python serve.py` (precisa da API /api/schedule).
 """
 import copy
 import json
+import random
 import re
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -41,6 +42,14 @@ def clean_networks(lst, allowed):
     return [n for n in dict.fromkeys(lst) if n in allowed][:8]
 
 
+def humanize(when):
+    """'2026-11-25T18:00' -> '2026-11-25T18:12': horario "redondo" (minuto multiplo de 5) ganha 1-29 min
+    aleatorios (nunca multiplo de 5, nunca vira a hora). Horarios ja "quebrados" (ex.: 18:49) ficam como estao."""
+    if when[14:] == "" or int(when[14:16]) % 5:
+        return when
+    return f"{when[:14]}{random.choice([m for m in range(1, 30) if m % 5]):02d}"
+
+
 def apply_action(sched, queue, body):
     """Aplica uma acao em `sched` (modifica no lugar) e devolve uma mensagem. ValueError = pedido invalido."""
     if not isinstance(body, dict):
@@ -57,7 +66,7 @@ def apply_action(sched, queue, body):
         nets = clean_networks(body.get("networks", []), nets_all)
         if not nets:
             raise ValueError("escolha ao menos uma rede")
-        items[vid] = {"when": parse_when(body["when"]), "networks": nets}
+        items[vid] = {"when": humanize(parse_when(body["when"])), "networks": nets}
         return "agendado"
 
     if act == "networks":
@@ -94,7 +103,7 @@ def apply_action(sched, queue, body):
             return "nenhum video aprovado sem data"
         d, i = start, 0
         for vid in todo:
-            items[vid] = {"when": f"{d.isoformat()}T{times[i]}", "networks": nets}
+            items[vid] = {"when": humanize(f"{d.isoformat()}T{times[i]}"), "networks": nets}
             i += 1
             if i >= per_day:
                 d, i = d + timedelta(days=1), 0
@@ -262,7 +271,7 @@ render();if(qp.get('open'))openDlg(qp.get('open'));
 
 TEMPLATE = """<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="editor-token" content="__TOKEN__">
 <meta name="viewport" content="width=device-width,initial-scale=1"><title>Agenda GTA VI</title><style>__CSS__</style></head><body>
-<header><h1>Agenda</h1><nav class="tabs"><a href="/">Revisão</a><a class="on" href="/agenda">Agenda</a></nav>
+<header><h1>Agenda</h1><nav class="tabs"><a href="/">Revisão</a><a class="on" href="/agenda">Agenda</a><a href="/backlog">Backlog</a></nav>
 <span class="count" id="count"></span><button id="btnAuto">Distribuir automaticamente</button><button id="btnNets">Redes…</button></header>
 <div class="banner">Aqui você só organiza: <b>nada é publicado automaticamente</b> (nenhuma rede está conectada). Vídeos editados ou desaprovados na Revisão saem da fila e precisam ser reaprovados.</div>
 <div class="layout">

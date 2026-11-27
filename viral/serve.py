@@ -15,6 +15,7 @@ from urllib.parse import parse_qs, unquote, urlparse
 
 sys.path.insert(0, str(Path(__file__).parent))   # python -I nao inclui a pasta do script
 import agenda as A
+import backlog as B
 import pipeline as P
 import review as R
 
@@ -53,6 +54,14 @@ def schedule_action(body):
         msg = A.apply_action(s, q, body)
         save_sched(s)
         return {"ok": True, "message": msg, "schedule": s, "videos": A.videos_view(q, s)}
+
+
+def backlog_action(body):
+    with SCHED_LOCK:
+        d = B.load()
+        msg = B.apply_action(d, body)
+        B.save(d)
+        return {"ok": True, "message": msg, "backlog": d}
 
 
 def save_queue(q):
@@ -231,6 +240,14 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
             return self.wfile.write(data)
+        if path == "/backlog":
+            data = B.build_page(TOKEN).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            return self.wfile.write(data)
         f = (OUT / path.lstrip("/")).resolve()
         if OUT.resolve() not in f.parents or f.suffix.lower() not in SERVE_EXT or not f.is_file():
             return self.send_json(404, {"ok": False, "error": "nao encontrado"})
@@ -300,13 +317,19 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(403, {"ok": False, "error": "host nao permitido"})
         path = unquote(urlparse(self.path).path)
         m = re.fullmatch(r"/api/apply/([\w\-]{1,40})", path)
-        if not m and path != "/api/schedule":
+        if not m and path not in ("/api/schedule", "/api/backlog"):
             return self.send_json(404, {"ok": False, "error": "rota inexistente"})
         body = self.read_body()
         if body is None:
             return
         try:
-            self.send_json(200, apply_edit(m.group(1), body) if m else schedule_action(body))
+            if m:
+                res = apply_edit(m.group(1), body)
+            elif path == "/api/backlog":
+                res = backlog_action(body)
+            else:
+                res = schedule_action(body)
+            self.send_json(200, res)
         except KeyError:
             self.send_json(404, {"ok": False, "error": "video nao encontrado"})
         except ValueError as e:

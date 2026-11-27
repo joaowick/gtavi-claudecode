@@ -197,7 +197,7 @@ def build_page(q, token=None):
     meta = f'<meta name="editor-token" content="{html.escape(token)}">' if served else ""
     banner = ('<div class="banner">Modo editor ativo: abra "Editar texto" em um cartao, altere e clique em Aplicar.</div>'
               if served else '<div class="banner">Modo somente leitura. Para editar textos, rode <code>python serve.py --open</code>.</div>')
-    nav = '<a class="navlink" href="/agenda">Agenda &rarr;</a>' if served else ""
+    nav = '<a class="navlink" href="/agenda">Agenda &rarr;</a> <a class="navlink" href="/backlog">Backlog &rarr;</a>' if served else ""
     prof = profile_defaults()
     edit_data = json.dumps({k: edit_view(v, prof) for k, v in q.items()} if served else {}, ensure_ascii=False).replace("</", "<\\/")
     return f"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">{meta}

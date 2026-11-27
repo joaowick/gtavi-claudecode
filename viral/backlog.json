@@ -1,0 +1,31 @@
+{
+  "items": [
+    {
+      "id": "insights",
+      "title": "Métricas do Facebook (viral/insights.py)",
+      "detail": "Ler token da Página GTA6Viral no Postgres do Postiz, chamar a Graph API (page insights + video_insights por Reel), cruzar com published.json/schedule.json, gravar output/insights.json e analisar com a skill learning-loop.\nAntes: confirmar com debug_token que o token tem read_insights e pages_read_engagement (autorizar consulta somente leitura). Alternativa: exportar CSV do Meta Business Suite.\nComplexidade baixa (~1-2 dias). Detalhes em NEXT.md.",
+      "status": "todo",
+      "prio": "alta",
+      "created": "2026-11-26 00:00",
+      "updated": "2026-11-26 00:00"
+    },
+    {
+      "id": "r2",
+      "title": "Limpeza do R2",
+      "detail": "Aplicar regra de ciclo de vida (apagar após 30 dias) no bucket gta6viral-media (Cloudflare > R2 > Settings > Object Lifecycle Rules) e apagar arquivos de teste.",
+      "status": "todo",
+      "prio": "baixa",
+      "created": "2026-11-26 00:00",
+      "updated": "2026-11-26 00:00"
+    },
+    {
+      "id": "page",
+      "title": "Página de backlog no pipeline",
+      "detail": "/backlog no serve.py.",
+      "status": "done",
+      "prio": "media",
+      "created": "2026-11-26 00:00",
+      "updated": "2026-11-26 00:00"
+    }
+  ]
+}

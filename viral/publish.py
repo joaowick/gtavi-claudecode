@@ -181,6 +181,10 @@ def main():
             print(f"[ok] {vid} -> {a.network} ({a.mode}) postId={pid}"); sent += 1
         except (PostizError, KeyError, IndexError) as e:
             print(f"[FALHOU] {vid}: {type(e).__name__}: {e}"); failed += 1
+    if a.yes and (sent or failed):
+        sys.path.insert(0, str(HERE))
+        from notify import send           # aviso opcional; sem config, so ignora
+        send(f"📤 Postiz: {sent} {'agendado(s)' if a.mode == 'schedule' else 'enviado(s)'} ({a.mode}), {failed} falha(s)")
     print(f"\n{'enviados' if a.yes else 'simulados'}: {sent if a.yes else '-'}  pulados: {skipped}  falhas: {failed}"
           + ("" if a.yes else "  (nada foi enviado; use --yes)"))
 
